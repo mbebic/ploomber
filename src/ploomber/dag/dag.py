@@ -163,7 +163,6 @@ class DAG(AbstractDAG):
         task has no serializer. See ``ploombe.tasks.PythonCallable``
         documentation for details.
     """
-
     def __init__(self, name=None, clients=None, executor='serial'):
         self._G = nx.DiGraph()
 
@@ -648,11 +647,20 @@ class DAG(AbstractDAG):
                                '"%s", skipping', self.name)
 
     def _deepcopy_safe(self):
+        # in some cases, the clients are not picklable. since we don't really
+        # need copies of them, we re-use the existing ones
+        clients = self._clients
+        self._clients = None
+
         try:
-            return deepcopy(self)
+            copy = deepcopy(self)
         except Exception as e:
             raise RuntimeError(
                 "An error occurred while copying DAG object") from e
+
+        copy._clients = clients
+
+        return copy
 
     def build_partially(self,
                         target,
@@ -1082,7 +1090,6 @@ def _product_short_repr(product):
 
 
 def _task_short_repr(task):
-
     def short(s):
         max_l = 30
         return s if len(s) <= max_l else s[:max_l - 3] + '...'
