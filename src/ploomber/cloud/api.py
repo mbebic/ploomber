@@ -1,7 +1,7 @@
+import cgi
 import sys
 from pathlib import Path
-from urllib.request import urlretrieve
-from urllib import parse
+from urllib.request import urlretrieve, urlopen
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import os
 from glob import glob
@@ -15,6 +15,7 @@ import requests
 import humanize
 
 from ploomber.table import Table
+from ploomber.cloud import io
 
 HOST = os.environ.get(
     'PLOOMBER_CLOUD_HOST',
@@ -22,9 +23,10 @@ HOST = os.environ.get(
 
 
 def _download_file(url):
-    # remove leading /
-    path = Path(parse.urlparse(url).path[1:])
-    path.parent.mkdir(exist_ok=True, parents=True)
+    remotefile = urlopen(url)
+    _, params = cgi.parse_header(remotefile.info()['Content-Disposition'])
+    path = params["filename"]
+    Path(path).parent.mkdir(exist_ok=True, parents=True)
     print(f'Downloading {path}')
     urlretrieve(url, path)
 
@@ -259,3 +261,34 @@ def upload_project(force, github_number, github_owner, github_repo, verbose):
     # TODO: if anything fails after runs_new, update the status to error
 
     return runid
+
+
+@auth_header
+def upload_data(headers, path):
+
+    create = _post(f"{HOST}/upload/data/create",
+                   headers=headers,
+                   json=dict(key=path, n_parts=io.n_parts(path))).json()
+
+    gen = io.UploadJobGenerator(path,
+                                key=path,
+                                upload_id=create['upload_id'],
+                                links=create['urls'])
+
+    click.echo('Uploading...')
+    parts = gen.upload()
+
+    _post(f"{HOST}/upload/data/complete",
+          headers=headers,
+          json=dict(key=path, parts=parts,
+                    upload_id=create['upload_id'])).json()
+
+    # print snippet showing how to download it in the pipeline
+
+
+@auth_header
+def download_data(headers, key):
+    response = _post(f"{HOST}/download/data",
+                     headers=headers,
+                     json=dict(key=key))
+    return response
