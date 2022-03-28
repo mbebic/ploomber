@@ -22,13 +22,19 @@ HOST = os.environ.get(
     'https://8lfxtyhlx2.execute-api.us-east-1.amazonaws.com/api/')
 
 
-def _download_file(url):
+def _download_file(url, skip_if_exists=False):
     remotefile = urlopen(url)
     _, params = cgi.parse_header(remotefile.info()['Content-Disposition'])
     path = params["filename"]
-    Path(path).parent.mkdir(exist_ok=True, parents=True)
-    print(f'Downloading {path}')
-    urlretrieve(url, path)
+
+    if skip_if_exists and Path(path).exists():
+        print(f'{path} exists, skipping...')
+    else:
+        Path(path).parent.mkdir(exist_ok=True, parents=True)
+        print(f'Downloading {path}')
+        urlretrieve(url, path)
+
+    return path
 
 
 def _request_factory(method):
@@ -265,13 +271,14 @@ def upload_project(force, github_number, github_owner, github_repo, verbose):
 
 @auth_header
 def upload_data(headers, path):
+    key = Path(path).name
 
     create = _post(f"{HOST}/upload/data/create",
                    headers=headers,
-                   json=dict(key=path, n_parts=io.n_parts(path))).json()
+                   json=dict(key=key, n_parts=io.n_parts(path))).json()
 
     gen = io.UploadJobGenerator(path,
-                                key=path,
+                                key=key,
                                 upload_id=create['upload_id'],
                                 links=create['urls'])
 
@@ -280,7 +287,7 @@ def upload_data(headers, path):
 
     _post(f"{HOST}/upload/data/complete",
           headers=headers,
-          json=dict(key=path, parts=parts,
+          json=dict(key=key, parts=parts,
                     upload_id=create['upload_id'])).json()
 
     # print snippet showing how to download it in the pipeline
