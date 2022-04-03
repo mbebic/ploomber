@@ -25,7 +25,7 @@ from ploomber.dag import util
 
 HOST = os.environ.get(
     'PLOOMBER_CLOUD_HOST',
-    'https://8lfxtyhlx2.execute-api.us-east-1.amazonaws.com/api/')
+    'https://t4nzmhelx3.execute-api.us-east-1.amazonaws.com/api/')
 
 
 def _remove_prefix(path):
