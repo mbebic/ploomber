@@ -180,9 +180,11 @@ def run_detail_print(run_id):
     run = out['run']
 
     if run['status'] == 'created':
-        print('Run created...')
+        click.echo('Run created...')
+    elif tasks:
+        click.echo(Table.from_dicts(tasks))
     else:
-        print(Table.from_dicts(tasks))
+        click.echo('Pipeline up-to-date, no tasks scheduled for this run.')
 
     return out
 
