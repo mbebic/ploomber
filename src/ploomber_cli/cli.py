@@ -602,7 +602,6 @@ def cloud_abort(run_id):
     api.run_abort(run_id)
 
 
-# TODO: data list
 @cloud.command(name="data")
 @click.option('-u', '--upload', default=None)
 @click.option('-d', '--delete', default=None)
@@ -610,10 +609,13 @@ def cloud_data(upload, delete):
     """
     Manage raw data workspace
 
+    List data files:
+        $ ploomber cloud data
+
     Upload data:
         $ ploomber cloud data --upload path/to/data.parquet
 
-    Delete data:
+    Delete data (deletes all the objects matching the pattern):
         $ ploomber cloud data --delete '*.parquet'
 
     Currently in private alpha, ask us for an invite:
@@ -621,10 +623,11 @@ def cloud_data(upload, delete):
     """
     from ploomber.cloud import api
 
-    # validate only one arg
+    # one arg max
 
     if upload:
         api.upload_data(upload)
-
-    if delete:
+    elif delete:
         api.delete_data(delete)
+    else:
+        api.data_list()
