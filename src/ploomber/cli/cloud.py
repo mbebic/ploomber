@@ -7,6 +7,7 @@ This command runs a bunch of pip/conda commands (depending on what's available)
 and it does the *right thing*: creating a new environment if needed, and
 locking dependencies.
 """
+import os
 import json
 import uuid
 import warnings
@@ -23,8 +24,10 @@ from ploomber.telemetry import telemetry
 from ploomber.telemetry.telemetry import check_dir_exist, CONF_DIR, \
     DEFAULT_USER_CONF, read_conf_file, update_conf_file, parse_dag
 
-CLOUD_APP_URL = 'ggeheljnx2.execute-api.us-east-1.amazonaws.com'
-PIPELINES_RESOURCE = '/prod/pipelines'
+# dev env
+CLOUD_APP_URL = 'pd02u265lj.execute-api.us-east-1.amazonaws.com'
+PIPELINES_RESOURCE = '/api/pipelines'
+
 headers = {'Content-type': 'application/json'}
 
 
@@ -33,6 +36,9 @@ def get_key():
     This gets the user cloud api key, returns None if doesn't exist.
     config.yaml is the default user conf file to fetch from.
     """
+    if 'PLOOMBER_CLOUD_KEY' in os.environ:
+        return os.environ['PLOOMBER_CLOUD_KEY']
+
     user_conf_path = Path(check_dir_exist(CONF_DIR), DEFAULT_USER_CONF)
     conf = read_conf_file(user_conf_path)
     key = conf.get('cloud_key', None)
@@ -101,6 +107,7 @@ def get_pipeline(pipeline_id=None, verbose=None):
 
         content = conn.getresponse().read()
         pipeline = json.loads(content)
+
         for item in pipeline:
             item['updated'] = get_last_run(item['updated'])
         return pipeline
@@ -190,6 +197,7 @@ def delete_pipeline(pipeline_id):
         headers['api_key'] = key
         headers['pipeline_id'] = pipeline_id
         conn.request("DELETE", PIPELINES_RESOURCE, headers=headers)
+
         res = conn.getresponse()
         content = ''
         if res.status < 200 or res.status > 300:
